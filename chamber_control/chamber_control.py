@@ -6,6 +6,16 @@ import RPi.GPIO as GPIO
 from collections import namedtuple
 
 #-----------------------------------------------------------------------
+# Global var defs
+#-----------------------------------------------------------------------
+
+total_num_trials = 0
+task_0_num_trials = 0
+task_1_num_trials = 0
+task_2 num_trials = 0
+task_3_num_trials = 0
+
+#-----------------------------------------------------------------------
 # Pin defs
 #-----------------------------------------------------------------------
 
@@ -22,36 +32,39 @@ right_pair = Light_Lever_Pair("Right", RIGHT_LIGHT_PIN, RIGHT_LEVER_PIN)
 pair_list = [left_pair, right_pair]
 
 #-----------------------------------------------------------------------
-# Task defs. The order/numbering of the tasks doesn't matter. It only matters
-# that the strings match the appropriate function and that they are stored 1-4
-# in the task list
+# Task defs.
+#
+# NOTE: The order/numbering of the tasks doesn't matter. It only matters
+# that the strings match the appropriate function and that they are
+# stored 0-3 in the task list
 #-----------------------------------------------------------------------
 
-TASK_1_STRING = "Lever matched to light"
-TASK_2_STRING = "Lever mismatched to light"
-TASK_3_STRING = "Right lever is correct"
-TASK_4_STRING = "Left lever is correct"
+NUM_TASKS = 4
+TASK_0_STRING = "Lever matched to light"
+TASK_1_STRING = "Lever mismatched to light"
+TASK_2_STRING = "Right lever is correct"
+TASK_3_STRING = "Left lever is correct"
 
-def task_1_lever_and_light_match():
-	print "Task 1: Lever and light match"
+def task_0_lever_and_light_match():
+	print "Task 0: Lever and light match"
 
-def task_2_lever_and_light_mismatch():
-	print "Task 2: Lever and light are mismatched"
+def task_1_lever_and_light_mismatch():
+	print "Task 1: Lever and light are mismatched"
 
-def task_3_right_lever_correct():
-	print "Task 3: Right lever is correct"
+def task_2_right_lever_correct():
+	print "Task 2: Right lever is correct"
 
-def task_4_left_lever_correct():
-	print "Task 4: Left lever is correct"
+def task_3_left_lever_correct():
+	print "Task 3: Left lever is correct"
 
 Task = namedtuple('Task', 'index function string')
-task_1 = Task(1, task_1_lever_and_light_match, TASK_1_STRING)
-task_2 = Task(2, task_2_lever_and_light_mismatch, TASK_2_STRING)
-task_3 = Task(3, task_3_right_lever_correct, TASK_3_STRING)
-task_4 = Task(4, task_4_left_lever_correct, TASK_4_STRING)
+task_0 = Task(0, task_0_lever_and_light_match, TASK_0_STRING)
+task_1 = Task(1, task_1_lever_and_light_mismatch, TASK_1_STRING)
+task_2 = Task(2, task_2_right_lever_correct, TASK_2_STRING)
+task_3 = Task(3, task_3_left_lever_correct, TASK_3_STRING)
 
-# Create a dictionary for the tasks where index is key.
-task_collection = {1:task_1, 2:task_2, 3:task_3, 4:task_4}
+# Create a dictionary for the tasks where index is the key.
+task_dict = {0:task_0, 1:task_1, 2:task_2, 3:task_3}
 
 #-----------------------------------------------------------------------
 #
@@ -63,6 +76,23 @@ GPIO.setmode(GPIO.BCM)
 for current_pair in pair_list:
 	GPIO.setup(current_pair.light_pin, GPIO.OUT)
 	GPIO.setup(current_pair.lever_pin, GPIO.IN)
+
+# Seed the random number generator with system time (default)
+random.seed()
+
+for i in range(0, NUM_TASKS):
+	random_task_index = random.randint(0, NUM_TASKS-1)
+	cur_task = task_dict.get(random_task_index)
+
+	# If the random index chosen has already been done, try again
+	while (None == cur_task):
+		random_task_index = random.randint(0, NUM_TASKS-1)
+		cur_task = task_dict.get(random_task_index)
+
+	(cur_task.function)()
+
+	# Remove the task from the dictionary now that it's complete
+	task_dict.pop(random_task_index)
 
 print "Test complete."
 
