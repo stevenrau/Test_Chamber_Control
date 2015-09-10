@@ -12,8 +12,17 @@ from collections import namedtuple
 total_num_trials = 0
 task_0_num_trials = 0
 task_1_num_trials = 0
-task_2 num_trials = 0
+task_2_num_trials = 0
 task_3_num_trials = 0
+
+#-----------------------------------------------------------------------
+# General-use function defs
+#-----------------------------------------------------------------------
+
+def dispense_pellet():
+	GPIO.output(PELLET_DISPENSER_PIN, GPIO.HIGH)
+	time.sleep(1)
+	GPIO.output(PELLET_DISPENSER_PIN, GPIO.LOW)
 
 #-----------------------------------------------------------------------
 # Pin defs
@@ -23,6 +32,7 @@ LEFT_LIGHT_PIN = 17
 LEFT_LEVER_PIN = 18   #TODO: Change to lever operation instead of button
 RIGHT_LIGHT_PIN = 22
 RIGHT_LEVER_PIN = 23  #TODO: Change to lever operation instead of button
+PELLET_DISPENSER_PIN = 4
 
 # Create tuples for the left and right light/lever pairs
 Light_Lever_Pair = namedtuple('Light_Lever_Pair', 'name light_pin lever_pin')
@@ -77,6 +87,8 @@ for current_pair in pair_list:
 	GPIO.setup(current_pair.light_pin, GPIO.OUT)
 	GPIO.setup(current_pair.lever_pin, GPIO.IN)
 
+GPIO.setup(PELLET_DISPENSER_PIN, GPIO.OUT)
+
 # Seed the random number generator with system time (default)
 random.seed()
 
@@ -93,6 +105,8 @@ for i in range(0, NUM_TASKS):
 
 	# Remove the task from the dictionary now that it's complete
 	task_dict.pop(random_task_index)
+
+dispense_pellet()
 
 print "Test complete."
 
