@@ -2,12 +2,16 @@
 
 import time
 import random
+import os
 import RPi.GPIO as GPIO
 from collections import namedtuple
 
 #-----------------------------------------------------------------------
-# Global var defs
+# Global var and constant defs
 #-----------------------------------------------------------------------
+
+MIN_NUM_TRIALS = 30
+REQ_NUM_CONSEC_SUCCESS = 10
 
 total_num_trials = 0
 task_0_num_trials = 0
@@ -64,8 +68,42 @@ def task_1_lever_and_light_mismatch():
 def task_2_right_lever_correct():
 	print "Task 2: Right lever is correct"
 
+	consecutive_successes = 0
+	task_success = False
+	global task_2_num_trials
+	task_2_num_trials = 0
+
+	#Repeat trial until 10 consecutive successes have been made after a minimum of 30 trials
+	while ((not task_success) or (task_2_num_trials < MIN_NUM_TRIALS)):
+		light_wait_time = random.randint(1, 5)
+		time.sleep(light_wait_time)
+
+		cur_rand_light = (random.choice(pair_list)).light_pin
+		GPIO.output(cur_rand_light, GPIO.HIGH)
+
+		trial_response = False
+
+		while (not trial_response):
+			if (GPIO.input(RIGHT_LEVER_PIN) == 1):
+				trial_response = True
+				consecutive_successes += 1
+			elif (GPIO.input(LEFT_LEVER_PIN) == 1):
+				trial_response = True
+				consecutive_successes = 0
+
+		task_2_num_trials += 1
+		GPIO.output(cur_rand_light, GPIO.LOW)
+
+		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
+			task_success = True
+
+	print "Total task 2 num trials", task_2_num_trials
+
+
+
 def task_3_left_lever_correct():
 	print "Task 3: Left lever is correct"
+
 
 Task = namedtuple('Task', 'index function string')
 task_0 = Task(0, task_0_lever_and_light_match, TASK_0_STRING)
