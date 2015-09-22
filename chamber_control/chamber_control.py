@@ -10,8 +10,8 @@ from collections import namedtuple
 # Global var and constant defs
 #-----------------------------------------------------------------------
 
-MIN_NUM_TRIALS = 30
-REQ_NUM_CONSEC_SUCCESS = 10
+MIN_NUM_TRIALS = 5
+REQ_NUM_CONSEC_SUCCESS = 3
 
 total_num_trials = 0
 task_0_num_trials = 0
@@ -23,10 +23,113 @@ task_3_num_trials = 0
 # General-use function defs
 #-----------------------------------------------------------------------
 
+def get_opposite_pair(pair):
+
+	if (RIGHT_LIGHT_PIN == pair.light_pin):
+		opposite_pair = left_pair
+	else:
+		opposite_pair = right_pair
+
+	return opposite_pair
+
+
 def dispense_pellet():
+
 	GPIO.output(PELLET_DISPENSER_PIN, GPIO.HIGH)
 	time.sleep(1)
 	GPIO.output(PELLET_DISPENSER_PIN, GPIO.LOW)
+
+
+def run_random_correct_lever_trials(light_lever_match):
+
+	consecutive_successes = 0
+	task_success = False
+	task_num_trials = 0
+
+	#Repeat trial until 10 consecutive successes have been made after a minimum of 30 trials
+	while ((not task_success) or (task_num_trials < MIN_NUM_TRIALS)):
+		light_wait_time = random.randint(1, 5)
+		time.sleep(light_wait_time)
+
+		random_pair = random.choice(pair_list)
+		cur_rand_light = random_pair.light_pin
+		if (light_lever_match):
+			correct_lever = random_pair.lever_pin
+			incorrect_lever = (get_opposite_pair(random_pair)).lever_pin
+		else:
+			correct_lever = (get_opposite_pair(random_pair)).lever_pin
+			incorrect_lever = random_pair.lever_pin
+
+		# Turn on the current random light
+		GPIO.output(cur_rand_light, GPIO.HIGH)
+
+		trial_response = False
+
+		while (not trial_response):
+			if (GPIO.input(correct_lever) == 1):
+				trial_response = True
+				consecutive_successes += 1
+				dispense_pellet()
+			elif (GPIO.input(incorrect_lever) == 1):
+				trial_response = True
+				consecutive_successes = 0
+
+		task_num_trials += 1
+		GPIO.output(cur_rand_light, GPIO.LOW)
+
+		#If the lever is still being pressed, wait to continue until it's released
+		while (GPIO.input(RIGHT_LEVER_PIN) or GPIO.input(LEFT_LEVER_PIN)):
+			pass
+
+		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
+			task_success = True
+
+	return task_num_trials
+
+
+
+def run_one_correct_lever_trials(correct_pair):
+
+	consecutive_successes = 0
+	task_success = False
+	task_num_trials = 0
+
+	if correct_pair.lever_pin == RIGHT_LEVER_PIN:
+		incorrect_pair = left_pair
+	else:
+		incorrect_pair = right_pair
+
+	#Repeat trial until 10 consecutive successes have been made after a minimum of 30 trials
+	while ((not task_success) or (task_num_trials < MIN_NUM_TRIALS)):
+		light_wait_time = random.randint(1, 5)
+		time.sleep(light_wait_time)
+
+		#Pick a random light and turn it on
+		cur_rand_light = (random.choice(pair_list)).light_pin
+		GPIO.output(cur_rand_light, GPIO.HIGH)
+
+		trial_response = False
+
+		while (not trial_response):
+			if (GPIO.input(correct_pair.lever_pin) == 1):
+				trial_response = True
+				consecutive_successes += 1
+				dispense_pellet()
+			elif (GPIO.input(incorrect_pair.lever_pin) == 1):
+				trial_response = True
+				consecutive_successes = 0
+
+		task_num_trials += 1
+		GPIO.output(cur_rand_light, GPIO.LOW)
+
+		#If the lever is still being pressed, wait to continue until it's released
+		while (GPIO.input(RIGHT_LEVER_PIN) or GPIO.input(LEFT_LEVER_PIN)):
+			pass
+
+		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
+			task_success = True
+
+	return task_num_trials
 
 #-----------------------------------------------------------------------
 # Pin defs
@@ -61,48 +164,30 @@ TASK_3_STRING = "Left lever is correct"
 
 def task_0_lever_and_light_match():
 	print "Task 0: Lever and light match"
+	global task_0_num_trials
+	task_0_num_trials = run_random_correct_lever_trials(True)
+	print "Total task 0 num trials", task_0_num_trials
+
 
 def task_1_lever_and_light_mismatch():
 	print "Task 1: Lever and light are mismatched"
+	global task_1_num_trials
+	task_1_num_trials = run_random_correct_lever_trials(False)
+	print "Total task 1 num trials", task_1_num_trials
+
 
 def task_2_right_lever_correct():
 	print "Task 2: Right lever is correct"
-
-	consecutive_successes = 0
-	task_success = False
 	global task_2_num_trials
-	task_2_num_trials = 0
-
-	#Repeat trial until 10 consecutive successes have been made after a minimum of 30 trials
-	while ((not task_success) or (task_2_num_trials < MIN_NUM_TRIALS)):
-		light_wait_time = random.randint(1, 5)
-		time.sleep(light_wait_time)
-
-		cur_rand_light = (random.choice(pair_list)).light_pin
-		GPIO.output(cur_rand_light, GPIO.HIGH)
-
-		trial_response = False
-
-		while (not trial_response):
-			if (GPIO.input(RIGHT_LEVER_PIN) == 1):
-				trial_response = True
-				consecutive_successes += 1
-			elif (GPIO.input(LEFT_LEVER_PIN) == 1):
-				trial_response = True
-				consecutive_successes = 0
-
-		task_2_num_trials += 1
-		GPIO.output(cur_rand_light, GPIO.LOW)
-
-		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
-			task_success = True
-
+	task_2_num_trials = run_one_correct_lever_trials(right_pair)
 	print "Total task 2 num trials", task_2_num_trials
-
 
 
 def task_3_left_lever_correct():
 	print "Task 3: Left lever is correct"
+	global task_3_num_trials
+	task_3_num_trials = run_one_correct_lever_trials(left_pair)
+	print "Total task 3 num trials", task_3_num_trials
 
 
 Task = namedtuple('Task', 'index function string')
@@ -131,6 +216,9 @@ GPIO.setup(PELLET_DISPENSER_PIN, GPIO.OUT)
 random.seed()
 
 for i in range(0, NUM_TASKS):
+
+	print ""
+
 	random_task_index = random.randint(0, NUM_TASKS-1)
 	cur_task = task_dict.get(random_task_index)
 
@@ -146,6 +234,6 @@ for i in range(0, NUM_TASKS):
 
 dispense_pellet()
 
-print "Test complete."
+print "\nTest complete."
 
 GPIO.cleanup()
