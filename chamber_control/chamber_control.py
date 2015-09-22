@@ -91,19 +91,19 @@ def run_random_correct_lever_trials(light_lever_match, task_id):
 			incorrect_lever = random_pair.lever_pin
 
 		# Turn on the current random light
-		GPIO.output(cur_rand_light, GPIO.HIGH)
+		GPIO.output(cur_rand_light, GPIO.LOW)
 
 		trial_response = False
 
 		start = time.clock()
 
 		while (not trial_response):
-			if (GPIO.input(correct_lever) == 1):
+			if (GPIO.input(correct_lever) != 1):
 				trial_response = True
 				trial_success = True
 				consecutive_successes += 1
 				dispense_pellet()
-			elif (GPIO.input(incorrect_lever) == 1):
+			elif (GPIO.input(incorrect_lever) != 1):
 				trial_response = True
 				trial_success = False
 				consecutive_successes = 0
@@ -117,7 +117,7 @@ def run_random_correct_lever_trials(light_lever_match, task_id):
 
 		total_num_trials += 1
 		task_num_trials += 1
-		GPIO.output(cur_rand_light, GPIO.LOW)
+		GPIO.output(cur_rand_light, GPIO.HIGH)
 
 		#Create the trial stats tuple and use it to update the stats lists
 		trial_info = Trial_Info(total_num_trials-1, task_id, trial_success, total_trial_time)
@@ -126,7 +126,7 @@ def run_random_correct_lever_trials(light_lever_match, task_id):
 
 
 		#If the lever is still being pressed, wait to continue until it's released
-		while (GPIO.input(RIGHT_LEVER_PIN) or GPIO.input(LEFT_LEVER_PIN)):
+		while ((not GPIO.input(RIGHT_LEVER_PIN)) or (not GPIO.input(LEFT_LEVER_PIN))):
 			pass
 
 
@@ -159,19 +159,19 @@ def run_one_correct_lever_trials(correct_pair, task_id):
 
 		#Pick a random light and turn it on
 		cur_rand_light = (random.choice(pair_list)).light_pin
-		GPIO.output(cur_rand_light, GPIO.HIGH)
+		GPIO.output(cur_rand_light, GPIO.LOW)
 
 		trial_response = False
 
 		start = time.clock()
 
 		while (not trial_response):
-			if (GPIO.input(correct_pair.lever_pin) == 1):
+			if (GPIO.input(correct_pair.lever_pin) != 1):
 				trial_response = True
 				trial_success = True
 				consecutive_successes += 1
 				dispense_pellet()
-			elif (GPIO.input(incorrect_pair.lever_pin) == 1):
+			elif (GPIO.input(incorrect_pair.lever_pin) != 1):
 				trial_response = True
 				trial_success = False
 				consecutive_successes = 0
@@ -185,7 +185,7 @@ def run_one_correct_lever_trials(correct_pair, task_id):
 
 		total_num_trials += 1
 		task_num_trials += 1
-		GPIO.output(cur_rand_light, GPIO.LOW)
+		GPIO.output(cur_rand_light, GPIO.HIGH)
 
 		#Create the trial stats tuple and use it to update the stats lists
 		trial_info = Trial_Info(total_num_trials-1, task_id, trial_success, total_trial_time)
@@ -193,7 +193,7 @@ def run_one_correct_lever_trials(correct_pair, task_id):
 		update_global_trials_stats_list(trial_info)
 
 		#If the lever is still being pressed, wait to continue until it's released
-		while (GPIO.input(RIGHT_LEVER_PIN) or GPIO.input(LEFT_LEVER_PIN)):
+		while ((not GPIO.input(RIGHT_LEVER_PIN)) or (not GPIO.input(LEFT_LEVER_PIN))):
 			pass
 
 
@@ -204,9 +204,11 @@ def run_one_correct_lever_trials(correct_pair, task_id):
 #-----------------------------------------------------------------------
 
 LEFT_LIGHT_PIN = 17
-LEFT_LEVER_PIN = 18   #TODO: Change to lever operation instead of button
+LEFT_LEVER_PIN = 18
+LEFT_LEVER_RETRACT_PIN = 24
 RIGHT_LIGHT_PIN = 22
-RIGHT_LEVER_PIN = 23  #TODO: Change to lever operation instead of button
+RIGHT_LEVER_PIN = 23
+RIGHT_LEVER_RETRACT_PIN = 25
 PELLET_DISPENSER_PIN = 4
 
 # Create tuples for the left and right light/lever pairs
@@ -321,12 +323,23 @@ for current_pair in pair_list:
 	GPIO.setup(current_pair.lever_pin, GPIO.IN)
 
 GPIO.setup(PELLET_DISPENSER_PIN, GPIO.OUT)
+GPIO.setup(LEFT_LEVER_RETRACT_PIN, GPIO.OUT)
+GPIO.setup(RIGHT_LEVER_RETRACT_PIN, GPIO.OUT)
 
 # Seed the random number generator with system time (default)
 random.seed()
 
 test_date_and_time = time.strftime("%c")
 print test_date_and_time
+
+GPIO.output(LEFT_LEVER_RETRACT_PIN, GPIO.LOW)
+GPIO.output(RIGHT_LEVER_RETRACT_PIN, GPIO.LOW)
+
+#Reset the light pins so that they don't start on
+GPIO.output(LEFT_LIGHT_PIN, GPIO.HIGH)
+GPIO.output(RIGHT_LIGHT_PIN, GPIO.HIGH)
+
+time.sleep(3)
 
 test_start_time = time.clock()
 
@@ -367,5 +380,7 @@ print "Total test time:", datetime.timedelta(seconds = int(total_test_time_sec))
 for info in global_trial_stats_list:
 	print info.trial_num, info.task_id, info.success, info.time
 
+GPIO.output(LEFT_LEVER_RETRACT_PIN, GPIO.HIGH)
+GPIO.output(RIGHT_LEVER_RETRACT_PIN, GPIO.HIGH)
 
 GPIO.cleanup()
