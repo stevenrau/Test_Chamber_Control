@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import time
+import datetime
 import random
 import os
 import RPi.GPIO as GPIO
@@ -10,14 +11,24 @@ from collections import namedtuple
 # Global var and constant defs
 #-----------------------------------------------------------------------
 
+NUM_TASKS = 4
 MIN_NUM_TRIALS = 5
 REQ_NUM_CONSEC_SUCCESS = 3
+MAX_NUM_TOTAL_TRIALS = MIN_NUM_TRIALS * NUM_TASKS
 
 total_num_trials = 0
 task_0_num_trials = 0
 task_1_num_trials = 0
 task_2_num_trials = 0
 task_3_num_trials = 0
+
+test_date_and_time = ""
+total_test_time_sec = 0.0
+
+#task_0_time_sec
+#task_1_time_sec
+#task_2_time_sec
+#task_3_time_sec
 
 #-----------------------------------------------------------------------
 # General-use function defs
@@ -32,6 +43,11 @@ def get_opposite_pair(pair):
 
 	return opposite_pair
 
+def update_task_stats_list():
+	pass
+
+def update_global_trials_stats_list()
+	pass
 
 def dispense_pellet():
 
@@ -42,12 +58,19 @@ def dispense_pellet():
 
 def run_random_correct_lever_trials(light_lever_match):
 
+	global total_num_trials
 	consecutive_successes = 0
 	task_success = False
 	task_num_trials = 0
 
 	#Repeat trial until 10 consecutive successes have been made after a minimum of 30 trials
 	while ((not task_success) or (task_num_trials < MIN_NUM_TRIALS)):
+
+		#If we've reached the maximum allowed total num trials, return
+		if (total_num_trials >= MAX_NUM_TOTAL_TRIALS):
+			print "Abandoning task because max number of total trials was reached"
+			return task_num_trials
+
 		light_wait_time = random.randint(1, 5)
 		time.sleep(light_wait_time)
 
@@ -65,15 +88,27 @@ def run_random_correct_lever_trials(light_lever_match):
 
 		trial_response = False
 
+		start = time.clock()
+
 		while (not trial_response):
 			if (GPIO.input(correct_lever) == 1):
 				trial_response = True
+				trial_success = True
 				consecutive_successes += 1
 				dispense_pellet()
 			elif (GPIO.input(incorrect_lever) == 1):
 				trial_response = True
+				trial_success = False
 				consecutive_successes = 0
 
+		end = time.clock()
+		total_trial_time = (end - start)
+		print "Trial", total_num_trials, ": %s." % "Success" if trial_success else "Failure. ", "Time elapsed: %.2f" % total_trial_time, "seconds."
+
+		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
+			task_success = True
+
+		total_num_trials += 1
 		task_num_trials += 1
 		GPIO.output(cur_rand_light, GPIO.LOW)
 
@@ -81,8 +116,6 @@ def run_random_correct_lever_trials(light_lever_match):
 		while (GPIO.input(RIGHT_LEVER_PIN) or GPIO.input(LEFT_LEVER_PIN)):
 			pass
 
-		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
-			task_success = True
 
 	return task_num_trials
 
@@ -90,6 +123,7 @@ def run_random_correct_lever_trials(light_lever_match):
 
 def run_one_correct_lever_trials(correct_pair):
 
+	global total_num_trials
 	consecutive_successes = 0
 	task_success = False
 	task_num_trials = 0
@@ -101,6 +135,12 @@ def run_one_correct_lever_trials(correct_pair):
 
 	#Repeat trial until 10 consecutive successes have been made after a minimum of 30 trials
 	while ((not task_success) or (task_num_trials < MIN_NUM_TRIALS)):
+
+		#If we've reached the maximum allowed total num trials, return
+		if (total_num_trials >= MAX_NUM_TOTAL_TRIALS):
+			print "Abandoning task because max number of total trials was reached"
+			return task_num_trials
+
 		light_wait_time = random.randint(1, 5)
 		time.sleep(light_wait_time)
 
@@ -110,15 +150,29 @@ def run_one_correct_lever_trials(correct_pair):
 
 		trial_response = False
 
+		start = time.clock()
+
 		while (not trial_response):
 			if (GPIO.input(correct_pair.lever_pin) == 1):
 				trial_response = True
+				trial_success = True
 				consecutive_successes += 1
 				dispense_pellet()
 			elif (GPIO.input(incorrect_pair.lever_pin) == 1):
 				trial_response = True
+				trial_success = False
 				consecutive_successes = 0
 
+		end = time.clock()
+		total_trial_time = (end - start)
+		print "Trial", total_num_trials, ": %s." % "Success" if trial_success else "Failure. ", "Time elapsed: %.2f" % total_trial_time, "seconds."
+#		update_task_stats_list()
+#		update_global_trials_stats_list()
+
+		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
+			task_success = True
+
+		total_num_trials += 1
 		task_num_trials += 1
 		GPIO.output(cur_rand_light, GPIO.LOW)
 
@@ -126,8 +180,6 @@ def run_one_correct_lever_trials(correct_pair):
 		while (GPIO.input(RIGHT_LEVER_PIN) or GPIO.input(LEFT_LEVER_PIN)):
 			pass
 
-		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
-			task_success = True
 
 	return task_num_trials
 
@@ -157,37 +209,66 @@ pair_list = [left_pair, right_pair]
 #-----------------------------------------------------------------------
 
 NUM_TASKS = 4
-TASK_0_STRING = "Lever matched to light"
-TASK_1_STRING = "Lever mismatched to light"
-TASK_2_STRING = "Right lever is correct"
-TASK_3_STRING = "Left lever is correct"
+TASK_0_STRING = "Task 0: \"Lever matched to light\""
+TASK_1_STRING = "Task 1: \"Lever mismatched to light\""
+TASK_2_STRING = "Task 2: \"Right lever is correct\""
+TASK_3_STRING = "Task 3: \"Left lever is correct\""
 
 def task_0_lever_and_light_match():
-	print "Task 0: Lever and light match"
+	print TASK_0_STRING
+	global task_0_time_sec
 	global task_0_num_trials
+
+	task_0_start_time = time.clock()
+
 	task_0_num_trials = run_random_correct_lever_trials(True)
-	print "Total task 0 num trials", task_0_num_trials
+
+	task_0_time_sec = time.clock() - task_0_start_time
+	print "\tTotal task 0 num trials", task_0_num_trials
+	print "\tTask 0 time elapsed:"  , datetime.timedelta(seconds = int(task_0_time_sec))
 
 
 def task_1_lever_and_light_mismatch():
-	print "Task 1: Lever and light are mismatched"
+	print TASK_1_STRING
+	global task_1_time_sec
 	global task_1_num_trials
+
+	task_1_start_time = time.clock()
+
 	task_1_num_trials = run_random_correct_lever_trials(False)
-	print "Total task 1 num trials", task_1_num_trials
+
+	task_1_time_sec = time.clock() - task_1_start_time
+	print "\tTotal task 1 num trials", task_1_num_trials
+	print "\tTask 1 time elapsed:"  , datetime.timedelta(seconds = int(task_1_time_sec))
 
 
 def task_2_right_lever_correct():
-	print "Task 2: Right lever is correct"
+	print TASK_2_STRING
+	global task_2_time_sec
 	global task_2_num_trials
+
+	task_2_start_time = time.clock()
+
 	task_2_num_trials = run_one_correct_lever_trials(right_pair)
-	print "Total task 2 num trials", task_2_num_trials
+
+	task_2_time_sec = time.clock() - task_2_start_time
+	print "\tTotal task 2 num trials", task_2_num_trials
+	print "\tTask 2 time elapsed:"  , datetime.timedelta(seconds = int(task_2_time_sec))
+
 
 
 def task_3_left_lever_correct():
-	print "Task 3: Left lever is correct"
+	print TASK_3_STRING
+	global task_3_time_sec
 	global task_3_num_trials
+
+	task_3_start_time = time.clock()
+
 	task_3_num_trials = run_one_correct_lever_trials(left_pair)
-	print "Total task 3 num trials", task_3_num_trials
+
+	task_3_time_sec = time.clock() - task_3_start_time
+	print "\tTotal task 3 num trials", task_3_num_trials
+	print "\tTask 3 time elapsed:"  , datetime.timedelta(seconds = int(task_3_time_sec))
 
 
 Task = namedtuple('Task', 'index function string')
@@ -198,6 +279,11 @@ task_3 = Task(3, task_3_left_lever_correct, TASK_3_STRING)
 
 # Create a dictionary for the tasks where index is the key.
 task_dict = {0:task_0, 1:task_1, 2:task_2, 3:task_3}
+
+#-----------------------------------------------------------------------
+# Stats defs
+#-----------------------------------------------------------------------
+
 
 #-----------------------------------------------------------------------
 #
@@ -215,6 +301,11 @@ GPIO.setup(PELLET_DISPENSER_PIN, GPIO.OUT)
 # Seed the random number generator with system time (default)
 random.seed()
 
+test_date_and_time = time.strftime("%c")
+print test_date_and_time
+
+test_start_time = time.clock()
+
 for i in range(0, NUM_TASKS):
 
 	print ""
@@ -227,13 +318,19 @@ for i in range(0, NUM_TASKS):
 		random_task_index = random.randint(0, NUM_TASKS-1)
 		cur_task = task_dict.get(random_task_index)
 
-	(cur_task.function)()
+	if ((total_num_trials + MIN_NUM_TRIALS) > MAX_NUM_TOTAL_TRIALS):
+		print "Not running", cur_task.string, "becuase the trial limit will be reached before task completion."
+	else:
+		(cur_task.function)()
 
 	# Remove the task from the dictionary now that it's complete
 	task_dict.pop(random_task_index)
 
-dispense_pellet()
 
 print "\nTest complete."
+
+test_end_time = time.clock()
+total_test_time_sec = test_end_time - test_start_time
+print "Total test time:", datetime.timedelta(seconds = int(total_test_time_sec))
 
 GPIO.cleanup()
