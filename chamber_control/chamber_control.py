@@ -25,10 +25,10 @@ task_3_num_trials = 0
 test_date_and_time = ""
 total_test_time_sec = 0.0
 
-#task_0_time_sec
-#task_1_time_sec
-#task_2_time_sec
-#task_3_time_sec
+task_0_time_sec = 0.0
+task_1_time_sec = 0.0
+task_2_time_sec = 0.0
+task_3_time_sec = 0.0
 
 #-----------------------------------------------------------------------
 # General-use function defs
@@ -43,11 +43,18 @@ def get_opposite_pair(pair):
 
 	return opposite_pair
 
-def update_task_stats_list():
-	pass
 
-def update_global_trials_stats_list()
-	pass
+def update_task_stats_list(task_id, trial_info):
+
+	global task_stats_dict
+	stats_list = task_stats_dict.get(task_id)
+	stats_list.append(trial_info)
+
+def update_global_trials_stats_list(trial_info):
+
+	global global_trial_stats_list
+	global_trial_stats_list.append(trial_info)
+
 
 def dispense_pellet():
 
@@ -56,7 +63,7 @@ def dispense_pellet():
 	GPIO.output(PELLET_DISPENSER_PIN, GPIO.LOW)
 
 
-def run_random_correct_lever_trials(light_lever_match):
+def run_random_correct_lever_trials(light_lever_match, task_id):
 
 	global total_num_trials
 	consecutive_successes = 0
@@ -112,6 +119,12 @@ def run_random_correct_lever_trials(light_lever_match):
 		task_num_trials += 1
 		GPIO.output(cur_rand_light, GPIO.LOW)
 
+		#Create the trial stats tuple and use it to update the stats lists
+		trial_info = Trial_Info(total_num_trials-1, task_id, trial_success, total_trial_time)
+		update_task_stats_list(task_id, trial_info)
+		update_global_trials_stats_list(trial_info)
+
+
 		#If the lever is still being pressed, wait to continue until it's released
 		while (GPIO.input(RIGHT_LEVER_PIN) or GPIO.input(LEFT_LEVER_PIN)):
 			pass
@@ -121,7 +134,7 @@ def run_random_correct_lever_trials(light_lever_match):
 
 
 
-def run_one_correct_lever_trials(correct_pair):
+def run_one_correct_lever_trials(correct_pair, task_id):
 
 	global total_num_trials
 	consecutive_successes = 0
@@ -166,8 +179,6 @@ def run_one_correct_lever_trials(correct_pair):
 		end = time.clock()
 		total_trial_time = (end - start)
 		print "Trial", total_num_trials, ": %s." % "Success" if trial_success else "Failure. ", "Time elapsed: %.2f" % total_trial_time, "seconds."
-#		update_task_stats_list()
-#		update_global_trials_stats_list()
 
 		if (consecutive_successes >= REQ_NUM_CONSEC_SUCCESS):
 			task_success = True
@@ -175,6 +186,11 @@ def run_one_correct_lever_trials(correct_pair):
 		total_num_trials += 1
 		task_num_trials += 1
 		GPIO.output(cur_rand_light, GPIO.LOW)
+
+		#Create the trial stats tuple and use it to update the stats lists
+		trial_info = Trial_Info(total_num_trials-1, task_id, trial_success, total_trial_time)
+		update_task_stats_list(task_id, trial_info)
+		update_global_trials_stats_list(trial_info)
 
 		#If the lever is still being pressed, wait to continue until it's released
 		while (GPIO.input(RIGHT_LEVER_PIN) or GPIO.input(LEFT_LEVER_PIN)):
@@ -221,7 +237,7 @@ def task_0_lever_and_light_match():
 
 	task_0_start_time = time.clock()
 
-	task_0_num_trials = run_random_correct_lever_trials(True)
+	task_0_num_trials = run_random_correct_lever_trials(True, 0)
 
 	task_0_time_sec = time.clock() - task_0_start_time
 	print "\tTotal task 0 num trials", task_0_num_trials
@@ -235,7 +251,7 @@ def task_1_lever_and_light_mismatch():
 
 	task_1_start_time = time.clock()
 
-	task_1_num_trials = run_random_correct_lever_trials(False)
+	task_1_num_trials = run_random_correct_lever_trials(False, 1)
 
 	task_1_time_sec = time.clock() - task_1_start_time
 	print "\tTotal task 1 num trials", task_1_num_trials
@@ -249,7 +265,7 @@ def task_2_right_lever_correct():
 
 	task_2_start_time = time.clock()
 
-	task_2_num_trials = run_one_correct_lever_trials(right_pair)
+	task_2_num_trials = run_one_correct_lever_trials(right_pair, 2)
 
 	task_2_time_sec = time.clock() - task_2_start_time
 	print "\tTotal task 2 num trials", task_2_num_trials
@@ -264,7 +280,7 @@ def task_3_left_lever_correct():
 
 	task_3_start_time = time.clock()
 
-	task_3_num_trials = run_one_correct_lever_trials(left_pair)
+	task_3_num_trials = run_one_correct_lever_trials(left_pair, 3)
 
 	task_3_time_sec = time.clock() - task_3_start_time
 	print "\tTotal task 3 num trials", task_3_num_trials
@@ -284,6 +300,14 @@ task_dict = {0:task_0, 1:task_1, 2:task_2, 3:task_3}
 # Stats defs
 #-----------------------------------------------------------------------
 
+Trial_Info = namedtuple('Trial_Info', 'trial_num task_id success time')
+global_trial_stats_list = []
+task_0_trial_stats_list = []
+task_1_trial_stats_list = []
+task_2_trial_stats_list = []
+task_3_trial_stats_list = []
+
+task_stats_dict = {0:task_0_trial_stats_list, 1:task_1_trial_stats_list, 2:task_2_trial_stats_list, 3:task_3_trial_stats_list}
 
 #-----------------------------------------------------------------------
 #
@@ -323,6 +347,11 @@ for i in range(0, NUM_TASKS):
 	else:
 		(cur_task.function)()
 
+	#TODO: Remove this. It's only here to show stats gathering is working
+	stats = task_stats_dict.get(random_task_index)
+	for info in stats:
+		print info.trial_num, info.task_id, info.success, info.time
+
 	# Remove the task from the dictionary now that it's complete
 	task_dict.pop(random_task_index)
 
@@ -331,6 +360,12 @@ print "\nTest complete."
 
 test_end_time = time.clock()
 total_test_time_sec = test_end_time - test_start_time
+
+#TODO: Get rid of this? Or put in a separate function if we want a stats summary
 print "Total test time:", datetime.timedelta(seconds = int(total_test_time_sec))
+
+for info in global_trial_stats_list:
+	print info.trial_num, info.task_id, info.success, info.time
+
 
 GPIO.cleanup()
