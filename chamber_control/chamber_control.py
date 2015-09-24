@@ -318,6 +318,10 @@ task_stats_dict = {0:task_0_trial_stats_list, 1:task_1_trial_stats_list, 2:task_
 # Use Broadcom pin number scheme
 GPIO.setmode(GPIO.BCM)
 
+#Set warnings to false. This disables warnings about "channels already
+#in use" when the program is run after being stopped prematurely
+GPIO.setwarnings(False);
+
 for current_pair in pair_list:
 	GPIO.setup(current_pair.light_pin, GPIO.OUT)
 	GPIO.setup(current_pair.lever_pin, GPIO.IN)
@@ -328,6 +332,11 @@ GPIO.setup(RIGHT_LEVER_RETRACT_PIN, GPIO.OUT)
 
 # Seed the random number generator with system time (default)
 random.seed()
+
+#Reset the light pins so that they don't start on
+GPIO.output(LEFT_LIGHT_PIN, GPIO.LOW)
+GPIO.output(RIGHT_LIGHT_PIN, GPIO.LOW)
+GPIO.output(PELLET_DISPENSER_PIN, GPIO.LOW)
 
 test_date_and_time = time.strftime("%c")
 print test_date_and_time
