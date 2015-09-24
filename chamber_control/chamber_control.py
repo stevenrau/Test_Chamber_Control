@@ -339,8 +339,6 @@ GPIO.output(RIGHT_LEVER_RETRACT_PIN, GPIO.LOW)
 GPIO.output(LEFT_LIGHT_PIN, GPIO.HIGH)
 GPIO.output(RIGHT_LIGHT_PIN, GPIO.HIGH)
 
-time.sleep(3)
-
 test_start_time = time.clock()
 
 for i in range(0, NUM_TASKS):
