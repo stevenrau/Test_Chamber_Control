@@ -27,7 +27,7 @@ How To Use:
     or view a stats summary. If you want to:
 
 	(a) View the stats summary, type "stats" and press enter
-        (b) Exit the program, type "exit" and press enter
+	(b) Exit the program, type "exit" and press enter
 
 (4) Once the sessions completes, all statistics gathered will be saved in a folder
     named "Test_Results" located in the top level of the home directory.
