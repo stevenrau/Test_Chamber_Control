@@ -3,8 +3,11 @@
 Task Definitions:
 ----------------
 -> Task 0: Task in which the lever matches the light
+
 -> Task 1: Task in which the lever is mismatched with the light
+
 -> Task 2: Task in which only the right lever is correct
+
 -> Task 3: Task in which only the left lever is correct
 
 How To Use:
