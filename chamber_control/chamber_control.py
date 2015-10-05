@@ -11,9 +11,11 @@ from collections import namedtuple
 # Global var and constant defs
 #-----------------------------------------------------------------------
 
+STATS_DIR = "/home/pi/Test_Results"
+
 NUM_TASKS = 4
-MIN_NUM_TRIALS = 5
-REQ_NUM_CONSEC_SUCCESS = 3
+MIN_NUM_TRIALS = 2
+REQ_NUM_CONSEC_SUCCESS = 1
 MAX_NUM_TOTAL_TRIALS = MIN_NUM_TRIALS * NUM_TASKS
 
 total_num_trials = 0
@@ -33,6 +35,72 @@ task_3_time_sec = 0.0
 #-----------------------------------------------------------------------
 # General-use function defs
 #-----------------------------------------------------------------------
+
+def print_stats_summary():
+
+	global global_trial_stats_list
+	global total_test_time_sec
+	print "\nTotal test time:", datetime.timedelta(seconds = int(total_test_time_sec))
+	print "Total number of trials ran:", total_num_trials
+	print "Task 0 number of trials:", task_0_num_trials
+	print "Task 1 number of trials:", task_1_num_trials
+	print "Task 2 number of trials:", task_2_num_trials
+	print "Task 3 number of trials:", task_3_num_trials
+
+	print "\nTrial #\tTask #\tSuccess\tTime(seconds)"
+	print "-------\t------\t-------\t----"
+	for info in global_trial_stats_list:
+		print info.trial_num, "\t", info.task_id, "\t", info.success, "\t", info.time
+
+	print ""
+
+
+def save_stats_to_files(save_name):
+
+	global STATS_DIR
+	global global_trial_stats_list
+	global task_stats_dict
+	global task_strings
+
+	#Make new folder in the Test_Results directory for this session's stats
+	os.mkdir(STATS_DIR + "/" + save_name)
+
+	save_dir = STATS_DIR + "/" + save_name
+
+	#Save the summary stats
+	cur_file = open(save_dir + "/Summary_" + save_name, "w")
+	cur_file.write("\nTotal test time: %s\n" % datetime.timedelta(seconds = int(total_test_time_sec)))
+	cur_file.write("Total number of trials ran: %d\n" % total_num_trials)
+	cur_file.write("Task 0 number of trials: %d\n" % task_0_num_trials)
+	cur_file.write("Task 1 number of trials: %d\n" % task_1_num_trials)
+	cur_file.write("Task 2 number of trials: %d\n" % task_2_num_trials)
+	cur_file.write("Task 3 number of trials: %d\n" % task_3_num_trials)
+	cur_file.close
+
+	#Save the global trial stats
+	cur_file = open(save_dir + "/AllTrials_" + save_name, "w")
+	cur_file.write("Trial #\tTask #\tSuccess\tTime(seconds)\n")
+	cur_file.write("-------\t------\t-------\t--------------\n")
+	for info in global_trial_stats_list:
+		cur_file.write("%d\t%d\t%s\t%.2f\n" % (info.trial_num, info.task_id, info.success, info.time))
+	cur_file.close()
+
+	#Save the stats for each task
+	for i in range(0, NUM_TASKS):
+		cur_task_string = task_strings.get(i)
+		cur_task_trials = task_stats_dict.get(i)
+
+		cur_file = open(save_dir + "/Task%d_" % i + save_name, "w")
+		cur_file.write("%s\n\n" % cur_task_string)
+		cur_file.write("Trial #\tTask #\tSuccess\tTime(seconds)\n")
+		cur_file.write("-------\t------\t-------\t--------------\n")
+
+		for info in cur_task_trials:
+			cur_file.write("%d\t%d\t%s\t%.2f\n" % (info.trial_num, info.task_id, info.success, info.time))
+
+		cur_file.close()
+
+
 
 def get_opposite_pair(pair):
 
@@ -298,6 +366,9 @@ task_3 = Task(3, task_3_left_lever_correct, TASK_3_STRING)
 # Create a dictionary for the tasks where index is the key.
 task_dict = {0:task_0, 1:task_1, 2:task_2, 3:task_3}
 
+#Also create a dictionary of task name strings since the task_dict will be modified at runtime
+task_strings = {0:TASK_0_STRING, 1:TASK_1_STRING, 2:TASK_2_STRING, 3:TASK_3_STRING}
+
 #-----------------------------------------------------------------------
 # Stats defs
 #-----------------------------------------------------------------------
@@ -367,11 +438,6 @@ for i in range(0, NUM_TASKS):
 	else:
 		(cur_task.function)()
 
-	#TODO: Remove this. It's only here to show stats gathering is working
-	stats = task_stats_dict.get(random_task_index)
-	for info in stats:
-		print info.trial_num, info.task_id, info.success, info.time
-
 	# Remove the task from the dictionary now that it's complete
 	task_dict.pop(random_task_index)
 
@@ -381,11 +447,24 @@ print "\nTest complete."
 test_end_time = time.clock()
 total_test_time_sec = test_end_time - test_start_time
 
-#TODO: Get rid of this? Or put in a separate function if we want a stats summary
-print "Total test time:", datetime.timedelta(seconds = int(total_test_time_sec))
+#Make sure ~/Test_Results exists. If not, create it
+if (not os.path.exists(STATS_DIR) or not os.path.isdir(STATS_DIR)):
+	os.mkdir(STATS_DIR)
 
-for info in global_trial_stats_list:
-	print info.trial_num, info.task_id, info.success, info.time
+#Save the stats files to a new directory in ~/Test_Results named after the cur date/time
+file_save_loc = time.strftime("%d-%m-%Y_%X")
+save_stats_to_files(file_save_loc)
+
+exit_prompt = "\nEnter \"stats\" to view a stats summary of the previous session or \"exit\" to quit.\n"
+
+user_input = raw_input(exit_prompt)
+while ("exit" != user_input):
+
+	if ("stats" == user_input):
+		print_stats_summary()
+
+	print exit_prompt
+	user_input = raw_input()
 
 GPIO.output(LEFT_LEVER_RETRACT_PIN, GPIO.HIGH)
 GPIO.output(RIGHT_LEVER_RETRACT_PIN, GPIO.HIGH)
