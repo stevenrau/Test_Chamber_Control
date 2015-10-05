@@ -404,11 +404,6 @@ GPIO.setup(RIGHT_LEVER_RETRACT_PIN, GPIO.OUT)
 # Seed the random number generator with system time (default)
 random.seed()
 
-#Reset the light pins so that they don't start on
-GPIO.output(LEFT_LIGHT_PIN, GPIO.LOW)
-GPIO.output(RIGHT_LIGHT_PIN, GPIO.LOW)
-GPIO.output(PELLET_DISPENSER_PIN, GPIO.LOW)
-
 test_date_and_time = time.strftime("%c")
 print test_date_and_time
 
@@ -447,13 +442,14 @@ print "\nTest complete."
 test_end_time = time.clock()
 total_test_time_sec = test_end_time - test_start_time
 
-#Make sure ~/Test_Results exists. If not, create it
+#Make sure /home/pi/Test_Results exists. If not, create it
 if (not os.path.exists(STATS_DIR) or not os.path.isdir(STATS_DIR)):
 	os.mkdir(STATS_DIR)
 
-#Save the stats files to a new directory in ~/Test_Results named after the cur date/time
+#Save the stats files to a new directory in /home/pi/Test_Results named after the cur date/time
 file_save_loc = time.strftime("%d-%m-%Y_%X")
 save_stats_to_files(file_save_loc)
+print "Statistics have been saved to", STATS_DIR + "/" + file_save_loc + "/"
 
 exit_prompt = "\nEnter \"stats\" to view a stats summary of the previous session or \"exit\" to quit.\n"
 
